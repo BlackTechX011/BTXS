@@ -26,6 +26,7 @@ const (
 	AppName         = "BTXS File Splitter"
 	Author          = "BlackTechX011"
 	GitHub          = "github.com/BlackTechX011"
+	Version         = version
 	DefaultPassword = "a-very-basic-but-functional-password"
 	MagicString     = "BTXSv1"
 	HeaderEndMarker = "---HEADER_END---"
