@@ -3,7 +3,7 @@
     Installs the BTXS™ command-line tool for Windows.
 .DESCRIPTION
     This script downloads the latest Windows binary for BTXS from GitHub,
-    installs it to the user's home directory (~/.BTXS), and adds the
+    installs it to the user's home directory (~/.btxs), and adds the
     installation directory to the user's PATH.
 .EXAMPLE
     To run from the web (ensure Execution Policy is set appropriately):
@@ -18,8 +18,8 @@ $ErrorActionPreference = 'Stop'
 
 # --- Configuration ---
 $Repo = "BlackTechX011/BTXS"
-$InstallDir = Join-Path $HOME ".BTXS"
-$ExeName = "BTXS.exe"
+$InstallDir = Join-Path $HOME ".btxs"
+$ExeName = "btxs.exe"
 
 # --- Main Logic ---
 try {
@@ -31,7 +31,7 @@ try {
     }
     $Arch = "amd64"
     $Os = "windows"
-    $BinaryName = "BTXS-$Os-$Arch.exe"
+    $BinaryName = "btxs-$Os-$Arch.exe"
     Write-Host "Detected System: $Os-$Arch. Target binary: $BinaryName" -ForegroundColor Cyan
 
     # 2. Get the download URL for the latest release
@@ -77,7 +77,7 @@ try {
     
     Write-Host ""
     Write-Host "BTXS™ was installed successfully!" -ForegroundColor Green
-    Write-Host "You can now run 'BTXS' from a new terminal window." -ForegroundColor Green
+    Write-Host "You can now run 'btxs' from a new terminal window." -ForegroundColor Green
 
 }
 catch {
