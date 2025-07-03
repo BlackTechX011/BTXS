@@ -15,13 +15,6 @@
 go.work
 go.work.sum
 
-# Local project executables
-btxz-go
-btxz-go.exe
-btxz
-btxz.exe
-btxz-*
-
 # OS-specific files
 .DS_Store
 Thumbs.db
