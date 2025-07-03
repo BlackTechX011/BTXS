@@ -2,103 +2,141 @@ name: Create and Publish Release
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
     paths:
-      - 'version.json'
-
-permissions:
-  contents: write
+      - version.json
 
 jobs:
-  build-and-release:
-    name: Build and Release
+  # ===================================================================
+  # BUILD ON UBUNTU 20.04 (FOR WIDE COMPATIBILITY) - USING DOCKER
+  # ===================================================================
+  build-compatible:
     runs-on: ubuntu-latest
-
+    container:
+      image: ubuntu:20.04
+    
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install Dependencies in Container
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git jq build-essential ca-certificates
+          
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          fetch-depth: 0
+          go-version: '1.21'
+
+      - name: Read version
+        run: echo "VERSION=$(jq -r .version version.json)" >> $GITHUB_ENV
+
+      - name: Inject version into Go source
+        run: |
+          sed -i "s/^const version = .*$/const version = \"${{ env.VERSION }}\"/" BTXS/main.go
+          
+      - name: Build cross-platform binaries (Compatible)
+        run: |
+          chmod +x scripts/build.sh
+          scripts/build.sh ${{ env.VERSION }} compat
+
+      - name: Upload compatible artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatible-binaries
+          path: artifacts/
+
+  # ===================================================================
+  # BUILD ON UBUNTU 22.04 (FOR MODERN SYSTEMS)
+  # ===================================================================
+  build-modern:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
-          cache-dependency-path: 'btxs/go.sum'
 
-      - name: Read version from version.json
-        id: version_reader
+      - name: Read version
+        run: echo "VERSION=$(jq -r .version version.json)" >> $GITHUB_ENV
+
+      - name: Inject version into Go source
         run: |
-          version=$(jq -r '.version' version.json)
-          echo "VERSION=${version}" >> $GITHUB_ENV
-          echo "Read version v${version} from version.json"
+          sed -i "s/^const version = .*$/const version = \"${{ env.VERSION }}\"/" BTXS/main.go
 
-      - name: Build cross-platform binaries
+      - name: Build cross-platform binaries (Modern)
+        run: |
+          chmod +x scripts/build.sh
+          scripts/build.sh ${{ env.VERSION }} modern
+
+      - name: Upload modern artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: modern-binaries
+          path: artifacts/
+
+  # ===================================================================
+  # COLLECT ALL BINARIES AND CREATE A SINGLE RELEASE
+  # ===================================================================
+  release:
+    needs: [build-compatible, build-modern]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version
+        run: echo "VERSION=$(jq -r .version version.json)" >> $GITHUB_ENV
+        
+      - name: Get Release Notes from Commit
+        id: get_notes
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty='format:%B' -- version.json)
+          echo "NOTES<<EOF" >> $GITHUB_ENV
+          echo "${COMMIT_MSG}" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: combined-artifacts
+          merge-multiple: true 
+          
+      - name: Generate checksums
         run: |
           mkdir -p artifacts
-          cd btxs
-
-          LDFLAGS="-ldflags=-X main.version=${{ env.VERSION }}"
-
-          platforms=("windows/amd64" "linux/amd64" "darwin/amd64" "darwin/arm64")
-
-          for platform in "${platforms[@]}"; do
-            platform_split=(${platform//\// })
-            GOOS=${platform_split[0]}
-            GOARCH=${platform_split[1]}
-            
-            output_name="btxs-${GOOS}-${GOARCH}"
-            if [ $GOOS = "windows" ]; then
-              output_name+='.exe'
-            fi
-
-            echo "Building for $GOOS/$GOARCH..."
-            # The rest of the command is correct and doesn't need to change.
-            env GOOS=$GOOS GOARCH=$GOARCH go build ${LDFLAGS} -o ../artifacts/${output_name} .
-            if [ $? -ne 0 ]; then
-                echo "An error occurred during build for $GOOS/$GOARCH."
-                exit 1
-            fi
-          done
-
+          mv combined-artifacts/* artifacts/
+          chmod +x scripts/generate-checksums.sh
+          # This script correctly creates artifacts/sha256sums.txt
+          scripts/generate-checksums.sh
+          
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "v${{ env.VERSION }}"
-          name: "btxs™ v${{ env.VERSION }}"
-          body: |
-            Official release for **btxs™ v${{ env.VERSION }}**.
-
-            See [LICENSE.md](LICENSE.md) for usage terms.
-
-            ### Installation
-            One-liner installers for your convenience.
-
-            **Linux / macOS / Termux**
-            ```sh
-            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install.sh | sh
-            ```
-
-            **Windows (PowerShell)**
-            ```powershell
-            Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass; iwr https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install.ps1 | iex
-            ```
+          name: "Release v${{ env.VERSION }}"
+          body: ${{ steps.get_notes.outputs.NOTES }}
           files: |
-            artifacts/btxs-*
+            # The 'artifacts/*' glob now correctly includes all binaries
+            # AND the sha256sums.txt file created by the script.
+            artifacts/*
             scripts/install.sh
             scripts/install.ps1
 
       - name: Update version.json with download URLs
-        id: update_json
         run: |
-          echo "Updating version.json with release asset URLs..."
-          urls_json=$(echo '${{ steps.create_release.outputs.assets }}' | \
-            jq -r '[.[] | {key: .name, value: .browser_download_url}] | from_entries')
+          urls_json=$(echo '${{ steps.create_release.outputs.assets }}' | jq -r '[.[] | {key: .name, value: .browser_download_url}] | from_entries')
           jq --argjson urls "$urls_json" '.urls = $urls' version.json > version.json.tmp && mv version.json.tmp version.json
-          
-          echo "Updated version.json content:"
           cat version.json
 
       - name: Commit and push updated version.json
@@ -106,7 +144,6 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add version.json
-          
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
