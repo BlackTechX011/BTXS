@@ -12,7 +12,7 @@ echo "Generating checksums..."
 cd "${OUTPUT_DIR}"
 
 # Generate a SHA256 checksum for all btxz binaries and save to a file
-sha256sum btxz-* > sha256sums.txt
+sha256sum btxs-* > sha256sums.txt
 
 echo "✅ Checksums generated successfully in ${OUTPUT_DIR}/sha256sums.txt:"
 # Display the contents of the file for logging purposes
