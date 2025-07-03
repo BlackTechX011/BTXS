@@ -1,0 +1,115 @@
+name: Create and Publish Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'version.json'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: 'btxs/go.sum'
+
+      - name: Read version from version.json
+        id: version_reader
+        run: |
+          version=$(jq -r '.version' version.json)
+          echo "VERSION=${version}" >> $GITHUB_ENV
+          echo "Read version v${version} from version.json"
+
+      - name: Build cross-platform binaries
+        run: |
+          mkdir -p artifacts
+          cd btxs
+
+          LDFLAGS="-ldflags=-X main.version=${{ env.VERSION }}"
+
+          platforms=("windows/amd64" "linux/amd64" "darwin/amd64" "darwin/arm64")
+
+          for platform in "${platforms[@]}"; do
+            platform_split=(${platform//\// })
+            GOOS=${platform_split[0]}
+            GOARCH=${platform_split[1]}
+            
+            output_name="btxs-${GOOS}-${GOARCH}"
+            if [ $GOOS = "windows" ]; then
+              output_name+='.exe'
+            fi
+
+            echo "Building for $GOOS/$GOARCH..."
+            # The rest of the command is correct and doesn't need to change.
+            env GOOS=$GOOS GOARCH=$GOARCH go build ${LDFLAGS} -o ../artifacts/${output_name} .
+            if [ $? -ne 0 ]; then
+                echo "An error occurred during build for $GOOS/$GOARCH."
+                exit 1
+            fi
+          done
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ env.VERSION }}"
+          name: "btxs™ v${{ env.VERSION }}"
+          body: |
+            Official release for **btxs™ v${{ env.VERSION }}**.
+
+            See [LICENSE.md](LICENSE.md) for usage terms.
+
+            ### Installation
+            One-liner installers for your convenience.
+
+            **Linux / macOS / Termux**
+            ```sh
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install.sh | sh
+            ```
+
+            **Windows (PowerShell)**
+            ```powershell
+            Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass; iwr https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install.ps1 | iex
+            ```
+          files: |
+            artifacts/btxs-*
+            scripts/install.sh
+            scripts/install.ps1
+
+      - name: Update version.json with download URLs
+        id: update_json
+        run: |
+          echo "Updating version.json with release asset URLs..."
+          urls_json=$(echo '${{ steps.create_release.outputs.assets }}' | \
+            jq -r '[.[] | {key: .name, value: .browser_download_url}] | from_entries')
+          jq --argjson urls "$urls_json" '.urls = $urls' version.json > version.json.tmp && mv version.json.tmp version.json
+          
+          echo "Updated version.json content:"
+          cat version.json
+
+      - name: Commit and push updated version.json
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add version.json
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore(release): Update asset URLs for v${{ env.VERSION }}"
+            git push
+          fi
