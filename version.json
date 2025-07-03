@@ -1,6 +1,16 @@
 {
-  "version": "1.0.0"
-  
-} 
-
-
+  "version": "1.0.0",
+  "urls": {
+    "sha256sums.txt": "https://github.com/BlackTechX011/BTXS/releases/download/v1.0.0/sha256sums.txt",
+    "btxs-windows-amd64-modern.exe": "https://github.com/BlackTechX011/BTXS/releases/download/v1.0.0/btxs-windows-amd64-modern.exe",
+    "btxs-windows-amd64-compat.exe": "https://github.com/BlackTechX011/BTXS/releases/download/v1.0.0/btxs-windows-amd64-compat.exe",
+    "btxs-linux-amd64-modern": "https://github.com/BlackTechX011/BTXS/releases/download/v1.0.0/btxs-linux-amd64-modern",
+    "btxs-linux-amd64-compat": "https://github.com/BlackTechX011/BTXS/releases/download/v1.0.0/btxs-linux-amd64-compat",
+    "btxs-darwin-arm64-modern": "https://github.com/BlackTechX011/BTXS/releases/download/v1.0.0/btxs-darwin-arm64-modern",
+    "btxs-darwin-arm64-compat": "https://github.com/BlackTechX011/BTXS/releases/download/v1.0.0/btxs-darwin-arm64-compat",
+    "btxs-darwin-amd64-modern": "https://github.com/BlackTechX011/BTXS/releases/download/v1.0.0/btxs-darwin-amd64-modern",
+    "btxs-darwin-amd64-compat": "https://github.com/BlackTechX011/BTXS/releases/download/v1.0.0/btxs-darwin-amd64-compat",
+    "install.sh": "https://github.com/BlackTechX011/BTXS/releases/download/v1.0.0/install.sh",
+    "install.ps1": "https://github.com/BlackTechX011/BTXS/releases/download/v1.0.0/install.ps1"
+  }
+}
