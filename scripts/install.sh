@@ -1,23 +1,23 @@
 #!/bin/sh
 
-# BTXS™ Smart Installer Script
+# BTXZ™ Smart Installer Script
 #
 # This script intelligently detects your system's capabilities to download
-# and install the correct version of BTXS.
+# and install the correct version of BTXZ.
 #
 # Usage:
-# curl -fsSL https://raw.githubusercontent.com/BlackTechX011/BTXS/main/scripts/install.sh | sh
+# curl -fsSL https://raw.githubusercontent.com/BlackTechX011/BTXZ/main/scripts/install.sh | sh
 #
 # Copyright (c) 2025-present, BlackTechX011
-# Licensed under the BTXS EULA. See https://github.com/BlackTechX011/BTXS/blob/main/LICENSE.md
+# Licensed under the BTXZ EULA. See https://github.com/BlackTechX011/BTXZ/blob/main/LICENSE.md
 
 set -e # Exit immediately if a command exits with a non-zero status.
 
 # --- Configuration ---
-REPO="BlackTechX011/BTXS"
-INSTALL_DIR="$HOME/.BTXS"
+REPO="BlackTechX011/BTXZ"
+INSTALL_DIR="$HOME/.btxz"
 PROFILE_FILES="$HOME/.zshrc $HOME/.bashrc $HOME/.profile"
-EXE_NAME="BTXS"
+EXE_NAME="btxz"
 
 # --- Helper Functions ---
 print_info() {
@@ -35,7 +35,7 @@ print_error() {
 
 # --- Main Logic ---
 main() {
-    print_info "Starting BTXS™ installation..."
+    print_info "Starting BTXZ™ installation..."
 
     # 1. Detect OS and Architecture
     os=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -49,7 +49,7 @@ main() {
             arch="arm64"
             ;;
         *)
-            print_error "Unsupported architecture: $arch. BTXS currently supports amd64 and arm64."
+            print_error "Unsupported architecture: $arch. BTXZ currently supports amd64 and arm64."
             ;;
     esac
 
@@ -138,7 +138,7 @@ main() {
     fi
 
     if ! grep -q "export PATH=\"$INSTALL_DIR:\$PATH\"" "$profile_to_update"; then
-        echo "\n# Added by BTXS installer" >> "$profile_to_update"
+        echo "\n# Added by BTXZ installer" >> "$profile_to_update"
         echo "$path_export" >> "$profile_to_update"
         print_info "Updated '$profile_to_update'. Please restart your terminal or run:"
         print_info "  source $profile_to_update"
@@ -146,7 +146,7 @@ main() {
         print_info "PATH already configured in '$profile_to_update'."
     fi
 
-    print_success "\nBTXS™ was installed successfully!"
+    print_success "\nBTXZ™ was installed successfully!"
     print_info "You can now run '$EXE_NAME' from your terminal."
 }
 
